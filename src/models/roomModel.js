@@ -76,9 +76,9 @@ const Room = {
             `SELECT rm.*, cr.room_name 
          FROM room_maps rm
          JOIN chat_rooms cr ON cr.id = rm.room_id
-         WHERE rm.room_id = ? AND rm.user_id = ? 
+         WHERE rm.user_id = ? 
          LIMIT 1`,
-            [room_id, user_id]
+            [ user_id]
         );
 
         if (existing.length > 0) {

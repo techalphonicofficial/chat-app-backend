@@ -1,30 +1,30 @@
 const Message = require('../models/messageModel');
 
 const { sendMessageService } = require('../services/messageService');
-
+const { setUserOnline, setUserOffline } = require('../models/userModel');
 
 
 // ─── Console Colors ────────────────────────────────────────────
 
 const C = {
 
-    reset:  '\x1b[0m',
+    reset: '\x1b[0m',
 
-    green:  '\x1b[32m',
+    green: '\x1b[32m',
 
     yellow: '\x1b[33m',
 
-    cyan:   '\x1b[36m',
+    cyan: '\x1b[36m',
 
-    red:    '\x1b[31m',
+    red: '\x1b[31m',
 
-    blue:   '\x1b[34m',
+    blue: '\x1b[34m',
 
-    magenta:'\x1b[35m',
+    magenta: '\x1b[35m',
 
-    gray:   '\x1b[90m',
+    gray: '\x1b[90m',
 
-    bold:   '\x1b[1m',
+    bold: '\x1b[1m',
 
 };
 
@@ -42,21 +42,21 @@ const timestamp = () => {
 
 const log = {
 
-    connect:    (msg) => console.log(`${timestamp()} ${C.green}${C.bold}✔ CONNECT   ${C.reset}${C.green}${msg}${C.reset}`),
+    connect: (msg) => console.log(`${timestamp()} ${C.green}${C.bold}✔ CONNECT   ${C.reset}${C.green}${msg}${C.reset}`),
 
-    join:       (msg) => console.log(`${timestamp()} ${C.cyan}${C.bold}🚪 JOIN ROOM ${C.reset}${C.cyan}${msg}${C.reset}`),
+    join: (msg) => console.log(`${timestamp()} ${C.cyan}${C.bold}🚪 JOIN ROOM ${C.reset}${C.cyan}${msg}${C.reset}`),
 
-    send:       (msg) => console.log(`${timestamp()} ${C.blue}${C.bold}📤 SENT      ${C.reset}${C.blue}${msg}${C.reset}`),
+    send: (msg) => console.log(`${timestamp()} ${C.blue}${C.bold}📤 SENT      ${C.reset}${C.blue}${msg}${C.reset}`),
 
-    receive:    (msg) => console.log(`${timestamp()} ${C.magenta}${C.bold}📩 RECEIVED  ${C.reset}${C.magenta}${msg}${C.reset}`),
+    receive: (msg) => console.log(`${timestamp()} ${C.magenta}${C.bold}📩 RECEIVED  ${C.reset}${C.magenta}${msg}${C.reset}`),
 
-    typing:     (msg) => console.log(`${timestamp()} ${C.yellow}${C.bold}✏  TYPING    ${C.reset}${C.yellow}${msg}${C.reset}`),
+    typing: (msg) => console.log(`${timestamp()} ${C.yellow}${C.bold}✏  TYPING    ${C.reset}${C.yellow}${msg}${C.reset}`),
 
     disconnect: (msg) => console.log(`${timestamp()} ${C.red}${C.bold}✖ DISCONNECT${C.reset}${C.red}${msg}${C.reset}`),
 
-    error:      (msg) => console.error(`${timestamp()} ${C.red}${C.bold}⚠ ERROR     ${C.reset}${C.red}${msg}${C.reset}`),
+    error: (msg) => console.error(`${timestamp()} ${C.red}${C.bold}⚠ ERROR     ${C.reset}${C.red}${msg}${C.reset}`),
 
-    status:     (msg) => console.log(`${timestamp()} ${C.yellow}✔ STATUS     ${C.reset}${C.yellow}${msg}${C.reset}`),
+    status: (msg) => console.log(`${timestamp()} ${C.yellow}✔ STATUS     ${C.reset}${C.yellow}${msg}${C.reset}`),
 
 };
 
@@ -69,8 +69,15 @@ module.exports = (io) => {
     io.on('connection', (socket) => {
 
         log.connect(`Socket ID: ${socket.id}`);
-
-
+        // Decoded user print (agar middleware ne verify kar diya to ye milega)
+        const userId = socket.user?.id;
+        if (userId) {
+            setUserOnline(userId)
+                .then(() => {
+                    console.log(`${timestamp()} ${C.green}${C.bold}👤 ONLINE     ${C.reset}${C.green}User ID: ${userId}${C.reset}`);
+                })
+                .catch(err => log.error(`Set Online Error: ${err.message}`));
+        }
         // ── User joins a room ──────────────────────────────────
 
         socket.on('join_room', async (room_id) => {
@@ -81,7 +88,7 @@ module.exports = (io) => {
 
                 log.join(`Socket ${socket.id} joined Room: ${room_id}`);
 
-                
+
 
                 // Fetch existing messages from DB
 
@@ -108,7 +115,7 @@ module.exports = (io) => {
 
                 log.send(`Room: ${data.room_id} | From: ${data.sender_id} | Msg: "${data.message}"`);
 
-                
+
 
                 // Save to DB and broadcast via Service
 
@@ -132,13 +139,13 @@ module.exports = (io) => {
 
                 log.status(`Message ${message_id} delivered in Room: ${room_id}`);
 
-                
+
 
                 // Update DB status to 'delivered'
 
                 await Message.updateStatus(message_id, 'delivered');
 
-                
+
 
                 io.to(room_id).emit("message_status_update", {
 
@@ -166,7 +173,7 @@ module.exports = (io) => {
 
                 log.status(`Messages in Room ${room_id} read by User: ${user_id}`);
 
-                
+
 
                 // Update DB: Mark messages as read for this user
 
@@ -205,11 +212,20 @@ module.exports = (io) => {
 
 
         // ── Disconnect ────────────────────────────────────────
-
         socket.on('disconnect', () => {
 
             log.disconnect(`Socket ID: ${socket.id}`);
 
+            // 👇 User details log karo
+            const userId = socket.user?.id;
+
+            if (userId) {
+                setUserOffline(userId)
+                    .then(() => {
+                        console.log(`${timestamp()} ${C.red}${C.bold}👤 OFFLINE    ${C.reset}${C.red}User ID: ${userId} | Last seen updated${C.reset}`);
+                    })
+                    .catch(err => log.error(`Set Offline Error: ${err.message}`));
+            }
         });
 
     });

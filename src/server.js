@@ -4,6 +4,7 @@ require('dotenv').config();
 const app = require('./app');
 const messageController = require('./controllers/messageController');
 const { createCorsOptions, getAllowedOrigins } = require('./config/corsOptions');
+const socketAuthMiddleware = require('./sockets/socketAuthMiddleware'); // 👈 ADD
 
 const server = http.createServer(app);
 
@@ -11,6 +12,9 @@ const io = new Server(server, {
     cors: createCorsOptions({ methods: ["GET", "POST"] }),
     transports: ["websocket", "polling"]
 });
+
+// 👇 ADD — chatSocket require hone se pehle
+io.use(socketAuthMiddleware);
 
 // Initialize Socket logic
 require('./sockets/chatSocket')(io);
