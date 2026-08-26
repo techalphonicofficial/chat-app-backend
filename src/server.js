@@ -1,16 +1,15 @@
 const http = require('http');
 const { Server } = require('socket.io');
+require('dotenv').config();
 const app = require('./app');
 const messageController = require('./controllers/messageController');
-require('dotenv').config();
+const { createCorsOptions, getAllowedOrigins } = require('./config/corsOptions');
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: createCorsOptions({ methods: ["GET", "POST"] }),
+    transports: ["websocket", "polling"]
 });
 
 // Initialize Socket logic
@@ -21,7 +20,10 @@ messageController.setSocketInstance(io);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
+    const allowedOrigins = getAllowedOrigins();
     console.log(`Server is running on:`);
     console.log(`- Local:   http://localhost:${PORT}`);
-    console.log(`- Network: http://192.168.1.7:${PORT}`);
+    console.log(`- Port:    ${PORT}`);
+    console.log(`- CORS:    ${allowedOrigins.length ? allowedOrigins.join(', ') : 'all origins'}`);
 });
+
