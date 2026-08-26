@@ -78,10 +78,18 @@ const Room = {
          JOIN chat_rooms cr ON cr.id = rm.room_id
          WHERE rm.user_id = ? 
          LIMIT 1`,
-            [ user_id]
+            [user_id]
         );
 
-        if (existing.length > 0) {
+        // 👇 User ka role DB se nikaalo
+        const [userRows] = await db.execute(
+            'SELECT role FROM users WHERE id = ? LIMIT 1',
+            [user_id]
+        );
+
+        console.log('Existing mapping check:', existing);
+
+        if (existing.length > 0 && userRows[0].role === "employee") {
             const roomName = existing[0].room_name || `Room #${existing[0].room_id}`;
             throw new Error(
                 `User is already mapped to room "${roomName}"`
