@@ -104,6 +104,42 @@ const Room = {
         return result.insertId;
     },
 
+    updateRoomMapping: async (user_id, new_room_id, can_view_previous_messages = 1) => {
+
+        // 👇 User ka role check karo
+        const [userRows] = await db.execute(
+            'SELECT role FROM users WHERE id = ? LIMIT 1',
+            [user_id]
+        );
+
+        if (userRows.length === 0) {
+            throw new Error('User not found');
+        }
+
+        const role = userRows[0].role;
+
+        if (role === 'admin') {
+            throw new Error('Admin does not use single-room mapping. Use mapUserToRoom instead.');
+        }
+
+        // 👇 Check karo ki existing mapping hai bhi ya nahi
+        const [existing] = await db.execute(
+            'SELECT * FROM room_maps WHERE user_id = ? LIMIT 1',
+            [user_id]
+        );
+        if (existing.length === 0) {
+            throw new Error('No existing room mapping found for this user. Use mapUserToRoom to create one.');
+        }
+
+        // 👇 Existing row ko update karo (delete+insert nahi, direct UPDATE)
+        await db.execute(
+            'UPDATE room_maps SET room_id = ?, can_view_previous_messages = ? WHERE user_id = ?',
+            [new_room_id, can_view_previous_messages, user_id]
+        );
+
+        return { user_id, old_room_id: existing[0].room_id, new_room_id };
+    },
+
     // Get all participants in a room (from room_maps)
     getParticipants: async (room_id) => {
         const [rows] = await db.execute(

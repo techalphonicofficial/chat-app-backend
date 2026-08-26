@@ -79,7 +79,7 @@ exports.updateRoomMapping = async (req, res) => {
             return res.status(400).json({ error: 'room_id and user_id are required' });
         }
 
-        const success = await Room.updateMapping(room_id, user_id, can_view_previous_messages);
+        const success = await Room.updateRoomMapping(user_id, room_id, can_view_previous_messages);
 
         if (!success) {
             return res.status(404).json({ error: 'Mapping not found' });
