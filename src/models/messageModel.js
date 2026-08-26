@@ -93,6 +93,44 @@ const Message = {
     );
   },
 
+  // getChatList: async (user_id) => {
+  //   const [rows] = await db.execute(
+  //       `SELECT 
+  //           m1.*,
+  //           cr.room_name,
+  //           cr.room_type,
+  //           cr.room_code,
+  //           u.name as other_user_name,
+  //           u.profile_image as other_user_image,
+  //           u.user_id as other_user_custom_id,
+  //           u.id as other_user_id,
+  //           (SELECT COUNT(*) FROM messages 
+  //            WHERE room_id = m1.room_id 
+  //            AND receiver_id = ? 
+  //            AND status != 'read') as unread_count
+  //       FROM messages m1
+  //       INNER JOIN (
+  //           SELECT 
+  //               room_id, 
+  //               MAX(created_at) as max_created_at
+  //           FROM messages
+  //           WHERE room_id IN (
+  //               SELECT room_id FROM room_maps WHERE user_id = ?
+  //           )
+  //           GROUP BY room_id
+  //       ) m2 ON m1.room_id = m2.room_id AND m1.created_at = m2.max_created_at
+  //       LEFT JOIN chat_rooms cr ON m1.room_id = CAST(cr.id AS CHAR) OR m1.room_id = cr.room_code
+  //       LEFT JOIN users u ON (
+  //           (cr.room_type = 'private') AND (
+  //               (m1.sender_id = ? AND u.id = m1.receiver_id) OR 
+  //               (m1.receiver_id = ? AND u.id = m1.sender_id)
+  //           )
+  //       )
+  //       ORDER BY m1.created_at DESC`,
+  //       [user_id, user_id, user_id, user_id]
+  //   );
+  //   return rows;
+  // }
   getChatList: async (user_id) => {
     const [rows] = await db.execute(
         `SELECT 
@@ -114,12 +152,14 @@ const Message = {
                 room_id, 
                 MAX(created_at) as max_created_at
             FROM messages
-            WHERE room_id IN (
-                SELECT room_id FROM room_maps WHERE user_id = ?
+            WHERE room_id COLLATE utf8mb4_unicode_ci IN (
+                SELECT room_id COLLATE utf8mb4_unicode_ci FROM room_maps WHERE user_id = ?
             )
             GROUP BY room_id
         ) m2 ON m1.room_id = m2.room_id AND m1.created_at = m2.max_created_at
-        LEFT JOIN chat_rooms cr ON m1.room_id = CAST(cr.id AS CHAR) OR m1.room_id = cr.room_code
+        LEFT JOIN chat_rooms cr 
+            ON m1.room_id COLLATE utf8mb4_unicode_ci = CAST(cr.id AS CHAR) COLLATE utf8mb4_unicode_ci 
+            OR m1.room_id COLLATE utf8mb4_unicode_ci = cr.room_code COLLATE utf8mb4_unicode_ci
         LEFT JOIN users u ON (
             (cr.room_type = 'private') AND (
                 (m1.sender_id = ? AND u.id = m1.receiver_id) OR 
@@ -130,7 +170,7 @@ const Message = {
         [user_id, user_id, user_id, user_id]
     );
     return rows;
-  }
+}
 };
 
 module.exports = Message;

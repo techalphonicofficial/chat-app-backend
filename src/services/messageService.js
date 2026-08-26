@@ -20,11 +20,11 @@ const sendMessageService = async (io, data, sender_role) => {
 
       // ONLY ADMIN can create a new room
 
-      // if (sender_role !== 'admin') {
+      if (sender_role !== 'admin') {
 
-      //   throw new Error('Only Admin can initiate a new chat.');
+        throw new Error('Only Admin can initiate a new chat.');
 
-      // }
+      }
 
       room_id = await Room.createPrivateRoom(sender_id, receiver_id);
 
