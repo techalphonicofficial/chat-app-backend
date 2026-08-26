@@ -642,3 +642,50 @@ exports.updateUser = async (req, res) => {
 
 };
 
+
+exports.deleteUser = async (req, res) => {
+
+  const { id } = req.params;  
+
+ if(req.user.role !== 'admin') {
+
+    return res.status(403).json({ status: false, message: "Forbidden: Only admins can delete users" }); 
+ }
+
+  try {
+    // 1. Fetch CURRENT data for history backup   
+    const [currentRows] = await db.execute("SELECT * FROM users WHERE id = ?", [id]);
+    if (currentRows.length === 0) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    } 
+    const currentUser = currentRows[0];
+    // 2. Save snapshot to user_history
+    await db.execute(
+      `INSERT INTO user_history (user_record_id, name, custom_user_id, mobile_number, profile_image, role, passkey_hash) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [   
+        currentUser.id,
+        currentUser.name,
+        currentUser.user_id,
+        currentUser.mobile_number,
+        currentUser.profile_image,
+        currentUser.role,
+        currentUser.passkey_hash
+      ]
+    );  
+
+
+    // 3. Delete user from users table
+    await db.execute("DELETE FROM users WHERE id = ?", [id]);
+
+    // 4. Optionally, you can also delete related data like room mappings, messages, etc.
+    await db.execute("DELETE FROM room_maps WHERE user_id = ?", [id]);
+    await db.execute("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?", [id, id]);
+
+    res.json({ status: true, message: "User deleted successfully" });
+
+  } catch (err) {
+    console.error("Delete User Error:", err);
+    res.status(500).json({ status: false, message: "Server error" });
+  } 
+}

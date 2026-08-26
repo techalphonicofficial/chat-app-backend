@@ -61,48 +61,48 @@ const Room = {
     },
 
     // OLD Map a user to a room
-    // mapUserToRoom: async (room_id, user_id, can_view_previous_messages = 1) => {
-    //     const [result] = await db.execute(
-    //         'INSERT INTO room_maps (room_id, user_id, can_view_previous_messages) VALUES (?, ?, ?)',
-    //         [room_id, user_id, can_view_previous_messages]
-    //     );
-    //     return result.insertId;
-    // },
-
-    //New with check for existing mapping and room name in error message
     mapUserToRoom: async (room_id, user_id, can_view_previous_messages = 1) => {
-        // Check if user is already mapped to this room (with room name)
-        const [existing] = await db.execute(
-            `SELECT rm.*, cr.room_name 
-         FROM room_maps rm
-         JOIN chat_rooms cr ON cr.id = rm.room_id
-         WHERE rm.user_id = ? 
-         LIMIT 1`,
-            [user_id]
-        );
-
-        // 👇 User ka role DB se nikaalo
-        const [userRows] = await db.execute(
-            'SELECT role FROM users WHERE id = ? LIMIT 1',
-            [user_id]
-        );
-
-        console.log('Existing mapping check:', existing);
-
-        if (existing.length > 0 && userRows[0].role === "employee") {
-            const roomName = existing[0].room_name || `Room #${existing[0].room_id}`;
-            throw new Error(
-                `User is already mapped to room "${roomName}"`
-            );
-        }
-
-        // Create new mapping
         const [result] = await db.execute(
             'INSERT INTO room_maps (room_id, user_id, can_view_previous_messages) VALUES (?, ?, ?)',
             [room_id, user_id, can_view_previous_messages]
         );
         return result.insertId;
     },
+
+    //New with check for existing mapping and room name in error message
+    // mapUserToRoom: async (room_id, user_id, can_view_previous_messages = 1) => {
+    //     // Check if user is already mapped to this room (with room name)
+    //     const [existing] = await db.execute(
+    //         `SELECT rm.*, cr.room_name 
+    //      FROM room_maps rm
+    //      JOIN chat_rooms cr ON cr.id = rm.room_id
+    //      WHERE rm.user_id = ? 
+    //      LIMIT 1`,
+    //         [user_id]
+    //     );
+
+    //     // 👇 User ka role DB se nikaalo
+    //     const [userRows] = await db.execute(
+    //         'SELECT role FROM users WHERE id = ? LIMIT 1',
+    //         [user_id]
+    //     );
+
+    //     console.log('Existing mapping check:', existing);
+
+    //     if (existing.length > 0 && userRows[0].role === "employee") {
+    //         const roomName = existing[0].room_name || `Room #${existing[0].room_id}`;
+    //         throw new Error(
+    //             `User is already mapped to room "${roomName}"`
+    //         );
+    //     }
+
+    //     // Create new mapping
+    //     const [result] = await db.execute(
+    //         'INSERT INTO room_maps (room_id, user_id, can_view_previous_messages) VALUES (?, ?, ?)',
+    //         [room_id, user_id, can_view_previous_messages]
+    //     );
+    //     return result.insertId;
+    // },
 
     updateRoomMapping: async (user_id, new_room_id, can_view_previous_messages = 1) => {
 
