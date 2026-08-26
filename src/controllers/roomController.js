@@ -57,9 +57,17 @@ exports.mapUserToRoom = async (req, res) => {
         });
     } catch (error) {
         console.error('Error mapping user to room:', error);
+
+        // Real DB-level duplicate key violation
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ error: 'User is already in this room' });
         }
+
+        // App-level check thrown from Room.mapUserToRoom (existing.length > 0)
+        if (error.message && error.message.includes('already mapped')) {
+            return res.status(400).json({ error: error.message });
+        }
+
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
@@ -70,7 +78,7 @@ exports.updateRoomMapping = async (req, res) => {
         if (!room_id || !user_id) {
             return res.status(400).json({ error: 'room_id and user_id are required' });
         }
-        
+
         const success = await Room.updateMapping(room_id, user_id, can_view_previous_messages);
 
         if (!success) {
@@ -82,7 +90,7 @@ exports.updateRoomMapping = async (req, res) => {
             await Room.archiveRoomMessages(room_id, user_id);
         }
 
-        res.status(200).json({ 
+        res.status(200).json({
             message: 'Room mapping updated successfully',
             archived: parseInt(can_view_previous_messages) === 0
         });
